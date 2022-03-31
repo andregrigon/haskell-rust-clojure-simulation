@@ -1,5 +1,8 @@
 Simple simulation of squares colliding and splitting in Haskell and Rust.
 
+Requirements:
+- Install sdl2
+
 Conclusion:
 - Haskell is more concise and easier to read and write
 - Rust is 2x faster:
