@@ -9,6 +9,8 @@ Conclusions:
 
 - Haskell is more concise and easier to read and write
 - Performance is similar (see table below)
+- Memory usage is similar, around 18MB
+- FPS is similarly steady around 59.5-60.0, with occasional drops to 57/58 in both. No obvious GC pauses for Haskell. 
 
 | Triangles per circle | Haskell (circles @ 55fps)| Rust (circles @ 55fps) | Haskell/Rust |
 |---|---|---|---|
