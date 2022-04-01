@@ -62,7 +62,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rust-squares"
+name = "rust-circles"
 version = "0.1.0"
 dependencies = [
  "gl",

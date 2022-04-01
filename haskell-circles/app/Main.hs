@@ -49,10 +49,7 @@ dot :: Vec2 -> Vec2 -> Double
 Vec2 x1 y1 `dot` Vec2 x2 y2 = (x1 * x2) + (y1 * y2)
 
 distanceSquared :: Vec2 -> Vec2 -> Double
-Vec2 x1 y1 `distanceSquared` Vec2 x2 y2 = (x * x) + (y * y)
-  where
-    x = x1 - x2
-    y = y1 - y2
+Vec2 x1 y1 `distanceSquared` Vec2 x2 y2 = (x1 - x2) ^ 2 + (y1 - y2) ^ 2
 
 zero :: Vec2
 zero = Vec2 0.0 0.0
@@ -103,18 +100,17 @@ detectCollisions a bs = case collisions a bs of
         id1 /= id2 && distanceSquared p1 p2 < (r1 + r2) ^ 2
     mkCollision Bound {boundPosition = p1} Bound {boundPosition = p2} = Collision (p2 .+. ((- 1) *. p1))
     collisions a = map (mkCollision a) . filter (collidesWith a)
-{-# INLINE detectCollisions #-}
 
 evolveObject :: Maybe Collision -> Interval -> Object -> [Object]
 evolveObject maybeCol (Interval dt) old
-  | outOfWalls old = []
+  | outsideWalls old = []
   | collided && objRadius old > minSplitRadius =
     [ old {objSpeed = speed', objPosition = position', objRadius = objRadius old * splitFactor},
       old {objSpeed = (- 1) *. speed', objPosition = position', objRadius = objRadius old * splitFactor}
     ]
   | otherwise = [old {objSpeed = speed', objPosition = position', objRadius = radius'}]
   where
-    outOfWalls Object {objPosition = Vec2 x y} = abs x > wall || abs y > wall
+    outsideWalls Object {objPosition = Vec2 x y} = abs x > wall || abs y > wall
     splitFactor = 0.7
     minSplitRadius = 0.1
     growthPerSec = 0.02
@@ -172,7 +168,7 @@ simulate program window duration initialWorld = do
   startTime <- currentTime
   loop (0, 0) 0 startTime initialWorld
   where
-    fpsWindow = 0.5
+    fpsWindow = 0.25
 
     loop :: (Double, Double) -> Double -> Instant -> World -> IO ()
     loop (fpsInterval, fpsCount) total instant@(Instant i) world = do
@@ -184,7 +180,8 @@ simulate program window duration initialWorld = do
       fps <-
         if fpsInterval >= fpsWindow
           then do
-            putStrLn $ showDouble (fpsCount / fpsInterval) ++ "fps | " ++ show world
+            let fps = fpsCount / fpsInterval
+            putStrLn $ (if fps < 55 then "! " else "") ++ showDouble fps ++ "fps | " ++ show world
             pure (0, 0)
           else pure (fpsInterval + dt, fpsCount + 1)
       if total' >= duration
@@ -257,51 +254,35 @@ fsSource =
     ]
 
 circle :: Color -> Double -> Vec2 -> (SV.Vector Float, SV.Vector Float)
-circle (Color r g b) rad' (Vec2 x' y') = (vs, cs)
+circle (Color r g b) rad' (Vec2 x' y') = (SV.generate coordCount vertex, SV.generate coordCount color)
   where
     rad = realToFrac rad'
     x = realToFrac x'
     y = realToFrac y'
-    vs = SV.generate 18 vs'
-    vs' 0 = rad + x
-    vs' 1 = rad + y
-    vs' 2 = 0
-    vs' 3 = rad + x
-    vs' 4 = (- rad) + y
-    vs' 5 = 0
-    vs' 6 = (- rad) + x
-    vs' 7 = (- rad) + y
-    vs' 8 = 0
-    vs' 9 = (- rad) + x
-    vs' 10 = rad + y
-    vs' 11 = 0
-    vs' 12 = rad + x
-    vs' 13 = rad + y
-    vs' 14 = 0
-    vs' 15 = (- rad) + x
-    vs' 16 = (- rad) + y
-    vs' 17 = 0
-    vs' _ = error "called vs' with too large number"
-    cs = SV.generate 18 cs'
-    cs' 0 = r
-    cs' 1 = g
-    cs' 2 = b
-    cs' 3 = r
-    cs' 4 = g
-    cs' 5 = b
-    cs' 6 = r
-    cs' 7 = g
-    cs' 8 = b
-    cs' 9 = r
-    cs' 10 = g
-    cs' 11 = b
-    cs' 12 = r
-    cs' 13 = g
-    cs' 14 = b
-    cs' 15 = r
-    cs' 16 = g
-    cs' 17 = b
-    cs' _ = error "called cs' with too large number"
+
+    vertexCount = trianglesPerCircle * 3
+    coordCount = vertexCount * 3
+    theta = 2 * pi / fromIntegral trianglesPerCircle
+
+    vertex i =
+      let n = i `quot` 9
+       in case i `rem` 9 of
+            0 -> rad * cos (theta * fromIntegral n) + x
+            1 -> rad * sin (theta * fromIntegral n) + y
+            2 -> 0
+            3 -> rad * cos (theta * fromIntegral (n + 1)) + x
+            4 -> rad * sin (theta * fromIntegral (n + 1)) + y
+            5 -> 0
+            6 -> x
+            7 -> y
+            8 -> 0
+            _ -> error "impossible"
+
+    color i = case i `rem` 3 of
+      0 -> r
+      1 -> g
+      2 -> b
+      _ -> error "impossible"
 
 draw :: GL.Program -> SDL.Window -> [(SV.Vector Float, SV.Vector Float)] -> IO ()
 draw p w verticesColors = do
@@ -341,6 +322,8 @@ windowWidth = 900
 
 windowHeight = 900
 
+trianglesPerCircle = 2048
+
 main :: IO ()
 main = do
   let speedFactor = 5
@@ -359,5 +342,5 @@ main = do
         }
   context <- SDL.glCreateContext window
   program <- initResources
-  simulate program window 15 World {worldObjects = objs, worldAge = 0}
+  simulate program window 10 World {worldObjects = objs, worldAge = 0}
   SDL.destroyWindow window

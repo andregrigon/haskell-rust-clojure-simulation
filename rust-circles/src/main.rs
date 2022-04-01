@@ -1,6 +1,7 @@
 use gl;
 use sdl2;
 use std;
+use std::f32::consts::PI;
 use std::ffi::{CStr, CString};
 
 fn current_time() -> Instant {
@@ -110,11 +111,11 @@ const MAX_GROWTH_RAD: f64 = 1.0;
 
 impl Object {
     fn evolve(self: &Self, maybe_col: &Option<Collision>, interval: &Interval) -> Vec<Object> {
-        fn out_of_walls(a: &Object) -> bool {
+        fn outside_walls(a: &Object) -> bool {
             let Vec2(x, y) = a.position;
             x.abs() > WALL || y.abs() > WALL
         }
-        if out_of_walls(&self) {
+        if outside_walls(&self) {
             vec![]
         } else {
             let collided = maybe_col.is_some();
@@ -233,7 +234,7 @@ fn simulate(program: &Program, window: &sdl2::video::Window, duration: f64, init
     let mut start_time = current_time();
     let mut world = initial_world;
     let mut total = 0.0;
-    let fps_window = 0.5;
+    let fps_window = 0.25;
     let mut fps_interval = 0.0;
     let mut fps_count = 0;
     loop {
@@ -244,7 +245,13 @@ fn simulate(program: &Program, window: &sdl2::video::Window, duration: f64, init
         world = world.evolve(&Interval { secs: dt });
         total += dt;
         if fps_interval >= fps_window {
-            println!("{:.2} fps | {}", fps_count as f64 / fps_interval, world);
+            let fps = fps_count as f64 / fps_interval;
+            println!(
+                "{}{:.2} fps | {}",
+                if fps < 55.0 { "! " } else { "" },
+                fps,
+                world
+            );
             fps_interval = 0.0;
             fps_count = 0;
         } else {
@@ -294,30 +301,52 @@ fn render(program: &Program, vertices_colors: &Vec<(Vec<f32>, Vec<f32>)>) {
     }
 }
 
-fn circle(Color(rd, gd, bd): &Color, rad: f64, Vec2(x, y): &Vec2) -> Visuals {
-    let vs = vec![
-        (rad + x) as f32,
-        (rad + y) as f32,
-        0.0,
-        (rad + x) as f32,
-        (-rad + y) as f32,
-        0.0,
-        (-rad + x) as f32,
-        (-rad + y) as f32,
-        0.0,
-        (-rad + x) as f32,
-        (rad + y) as f32,
-        0.0,
-        (rad + x) as f32,
-        (rad + y) as f32,
-        0.0,
-        (-rad + x) as f32,
-        (-rad + y) as f32,
-        0.0,
-    ];
+fn generate_vec<F>(size: usize, f: F) -> Vec<f32>
+where
+    F: Fn(usize) -> f32,
+{
+    (0..size).map(f).collect()
+    //let mut v = Vec::with_capacity(size);
+    //for i in 0..size {
+    //    v.push(f(i));
+    //}
+    //v
+}
+
+fn circle(Color(rd, gd, bd): &Color, radd: f64, Vec2(xd, yd): &Vec2) -> Visuals {
     let (r, g, b) = (*rd as f32, *gd as f32, *bd as f32);
-    let cs = vec![r, g, b, r, g, b, r, g, b, r, g, b, r, g, b, r, g, b];
-    (vs, cs)
+    let rad = radd as f32;
+    let x = *xd as f32;
+    let y = *yd as f32;
+
+    let vertex_count = TRIANGLES_PER_CIRCLE * 3;
+    let coord_count = vertex_count * 3;
+    let theta = 2.0 * PI / TRIANGLES_PER_CIRCLE as f32;
+    let color = |i: usize| match i % 3 {
+        0 => r,
+        1 => g,
+        2 => b,
+        _ => panic!("impossible"),
+    };
+    let colors: Vec<f32> = generate_vec(coord_count as usize, color);
+    let vertex = |i: u64| {
+        let n = i / 9;
+        match i % 9 {
+            0 => rad * (theta * (n as f32)).cos() + x,
+            1 => rad * (theta * (n as f32)).sin() + y,
+            2 => 0.0,
+            3 => rad * (theta * ((n + 1) as f32)).cos() + x,
+            4 => rad * (theta * ((n + 1) as f32)).sin() + y,
+            5 => 0.0,
+            6 => x,
+            7 => y,
+            8 => 0.0,
+            _ => panic!("impossible"),
+        }
+    };
+    let vertices: Vec<f32> = (0..coord_count).map(vertex).collect();
+
+    (vertices, colors)
 }
 
 const RED: Color = Color(1.0, 0.0, 0.0);
@@ -484,6 +513,7 @@ fn init_resources() -> Program {
 
 const WINDOW_WIDTH: u32 = 900;
 const WINDOW_HEIGHT: u32 = 900;
+const TRIANGLES_PER_CIRCLE: u64 = 2048;
 
 fn main() {
     let speed_factor = 5.0;
@@ -524,7 +554,7 @@ fn main() {
     simulate(
         &program,
         &window,
-        15.0,
+        10.0,
         World {
             objects: objs,
             age: 0.0,

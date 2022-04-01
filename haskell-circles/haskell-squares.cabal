@@ -1,15 +1,15 @@
 cabal-version:      2.4
-name:               haskell-squares
+name:               haskell-circles
 version:            0.1.0.0
 
 author:             André Gustavo Rigon
 maintainer:         andregrigon@gmail.com
 
-executable simple-haskell
+executable haskell-circles
     main-is:          Main.hs
     build-depends:    base ^>=4.14.3.0, time, 
                       vector, sdl2, text, OpenGL, bytestring, ghc-prim, deepseq
     hs-source-dirs:   app
     default-language: Haskell2010
-    default-extensions: NamedFieldPuns, OverloadedStrings, BangPatterns, MagicHash, DeriveGeneric, DeriveAnyClass
-    ghc-options: -O2 -rtsopts
+    default-extensions: NamedFieldPuns, OverloadedStrings, BangPatterns, MagicHash
+    ghc-options: -rtsopts -fllvm -funbox-strict-fields -fexcess-precision
