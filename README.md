@@ -24,7 +24,7 @@ Conclusions:
 
 Haskell:
 - Enabling optimization is in cabal.project.local
-- Anotating strict data fields and compiling with `ghc-options: -fllvm -funbox-strict-fields -fexcess-precision` makes a huge difference. 
+- Annotating strict data fields and compiling with `ghc-options: -fllvm -funbox-strict-fields -fexcess-precision` makes a huge difference.
 - Using vectors everywhere had much worse performance than lists where they are used only for accumulation and single iteration
 - The functions `quot` and `rem` are the equivalents of Rust's `/` and `%` (as opposed to `div` and `mod`). They also perform much better. 
 - Manually unboxed arithmetic didn't improve performance
