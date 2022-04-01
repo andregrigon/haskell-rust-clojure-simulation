@@ -85,24 +85,19 @@ pub struct Collision(Vec2);
 const WALL: f64 = 10.0;
 
 impl Bound {
-    fn collides_with(self: &Self, other: &Bound) -> Option<Collision> {
-        if self.id != other.id
+    fn collides_with(self: &Self, other: &Bound) -> bool {
+        self.id != other.id
             && self.position.distance_squared(&other.position)
                 < (self.radius + other.radius).powi(2)
-        {
-            Some(Collision(other.position.plus(&self.position.times(-1.0))))
-        } else {
-            None
-        }
     }
 
     fn detect_collisions(self: &Self, bs: &Vec<&Bound>) -> Option<Collision> {
         let mut collisions = bs
             .into_iter()
-            .map(|b| self.collides_with(&b))
-            .filter(|c| c.is_some());
+            .filter(|b| self.collides_with(b))
+            .map(|b| Collision(b.position.plus(&self.position.times(-1.0))));
         match collisions.next() {
-            Some(c) => c,
+            Some(c) => Some(c),
             None => None,
         }
     }

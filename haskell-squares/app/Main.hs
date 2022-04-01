@@ -1,6 +1,5 @@
 module Main (main) where
 
-import Control.DeepSeq
 import Control.Monad (forM_, unless)
 import qualified Data.ByteString as BS
 import Data.Maybe (isJust, listToMaybe, mapMaybe)
@@ -9,7 +8,6 @@ import Data.Time.Clock.POSIX (getPOSIXTime)
 import Data.Vector (Vector)
 import qualified Data.Vector as V
 import qualified Data.Vector.Storable as SV
-import GHC.Exts hiding (Vec2)
 import Graphics.Rendering.OpenGL (($=))
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Graphics.Rendering.OpenGL as SDL
@@ -43,42 +41,35 @@ showDouble d = show $ fromIntegral (floor (d * (10.0 ^ precision))) / (10.0 ^ pr
 
 (.+.) :: Vec2 -> Vec2 -> Vec2
 Vec2 x1 y1 .+. Vec2 x2 y2 = Vec2 (x1 + x2) (y1 + y2)
-{-# INLINE (.+.) #-}
 
 (*.) :: Double -> Vec2 -> Vec2
 k *. Vec2 x y = Vec2 (k * x) (k * y)
-{-# INLINE (*.) #-}
 
 dot :: Vec2 -> Vec2 -> Double
 Vec2 x1 y1 `dot` Vec2 x2 y2 = (x1 * x2) + (y1 * y2)
-{-# INLINE dot #-}
 
 distanceSquared :: Vec2 -> Vec2 -> Double
 Vec2 x1 y1 `distanceSquared` Vec2 x2 y2 = (x * x) + (y * y)
   where
     x = x1 - x2
     y = y1 - y2
-{-# INLINE distanceSquared #-}
 
 zero :: Vec2
 zero = Vec2 0.0 0.0
 
 vecLength :: Vec2 -> Double
 vecLength v = sqrt (distanceSquared v zero)
-{-# INLINE vecLength #-}
 
 normalize :: Vec2 -> Vec2
 normalize v = (1.0 / vl') *. v
   where
     vl = vecLength v
     vl' = if vl < 0.01 then 0.01 else vl
-{-# INLINE normalize #-}
 
 reflect :: Vec2 -> Vec2 -> Vec2
 reflect d n = d .+. (((-2.0) * (d `dot` n')) *. n')
   where
     n' = normalize n
-{-# INLINE reflect #-}
 
 data Object = Object
   { objId :: !Int,
@@ -102,7 +93,7 @@ wall :: Double
 wall = 10
 
 detectCollisions :: Bound -> [Bound] -> Maybe Collision
-detectCollisions !a bs = case collisions a bs of
+detectCollisions a bs = case collisions a bs of
   [] -> Nothing
   c : _ -> Just c
   where
@@ -115,7 +106,7 @@ detectCollisions !a bs = case collisions a bs of
 {-# INLINE detectCollisions #-}
 
 evolveObject :: Maybe Collision -> Interval -> Object -> [Object]
-evolveObject !maybeCol (Interval !dt) !old
+evolveObject maybeCol (Interval dt) old
   | outOfWalls old = []
   | collided && objRadius old > minSplitRadius =
     [ old {objSpeed = speed', objPosition = position', objRadius = objRadius old * splitFactor},
@@ -143,11 +134,9 @@ evolveObject !maybeCol (Interval !dt) !old
 boundObject :: Object -> Bound
 boundObject Object {objId, objRadius, objPosition} =
   Bound {boundId = objId, boundRadius = objRadius, boundPosition = objPosition}
-{-# INLINE boundObject #-}
 
 drawObject :: Object -> Visuals
 drawObject Object {objRadius, objPosition, objColor} = circle objColor objRadius objPosition
-{-# INLINE drawObject #-}
 
 data World = World
   { worldObjects :: ![Object],
@@ -163,7 +152,7 @@ evolveWorld dt world@World {worldObjects, worldAge} =
     }
   where
     bounds = fmap boundObject worldObjects
-    collisions !a = detectCollisions bound (walls ++ bounds)
+    collisions a = detectCollisions bound (walls ++ bounds)
       where
         bound@Bound {boundPosition = Vec2 x y} = boundObject a
         topWall = Bound {boundId = - 1, boundRadius = 0, boundPosition = Vec2 x wall}
@@ -173,8 +162,8 @@ evolveWorld dt world@World {worldObjects, worldAge} =
         walls = [topWall, bottomWall, leftWall, rightWall]
 
 drawWorld :: SDL.Program -> SDL.Window -> World -> IO ()
-drawWorld program window !world = do
-  let !drawings = map drawObject (worldObjects world)
+drawWorld program window world = do
+  let drawings = map drawObject (worldObjects world)
   draw program window drawings
   SDL.glSwapWindow window
 
@@ -268,7 +257,7 @@ fsSource =
     ]
 
 circle :: Color -> Double -> Vec2 -> (SV.Vector Float, SV.Vector Float)
-circle (Color !r !g !b) !rad' (Vec2 !x' !y') = id $!! (vs, cs)
+circle (Color r g b) rad' (Vec2 x' y') = (vs, cs)
   where
     rad = realToFrac rad'
     x = realToFrac x'
@@ -315,7 +304,7 @@ circle (Color !r !g !b) !rad' (Vec2 !x' !y') = id $!! (vs, cs)
     cs' _ = error "called cs' with too large number"
 
 draw :: GL.Program -> SDL.Window -> [(SV.Vector Float, SV.Vector Float)] -> IO ()
-draw p w !verticesColors = do
+draw p w verticesColors = do
   let (width, height) = (fromIntegral windowWidth, fromIntegral windowHeight)
   GL.viewport $= (GL.Position 0 0, GL.Size width height)
 
@@ -370,5 +359,5 @@ main = do
         }
   context <- SDL.glCreateContext window
   program <- initResources
-  simulate program window 10 World {worldObjects = objs, worldAge = 0}
+  simulate program window 15 World {worldObjects = objs, worldAge = 0}
   SDL.destroyWindow window
