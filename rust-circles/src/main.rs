@@ -301,18 +301,6 @@ fn render(program: &Program, vertices_colors: &Vec<(Vec<f32>, Vec<f32>)>) {
     }
 }
 
-fn generate_vec<F>(size: usize, f: F) -> Vec<f32>
-where
-    F: Fn(usize) -> f32,
-{
-    (0..size).map(f).collect()
-    //let mut v = Vec::with_capacity(size);
-    //for i in 0..size {
-    //    v.push(f(i));
-    //}
-    //v
-}
-
 fn circle(Color(rd, gd, bd): &Color, radd: f64, Vec2(xd, yd): &Vec2) -> Visuals {
     let (r, g, b) = (*rd as f32, *gd as f32, *bd as f32);
     let rad = radd as f32;
@@ -322,13 +310,13 @@ fn circle(Color(rd, gd, bd): &Color, radd: f64, Vec2(xd, yd): &Vec2) -> Visuals 
     let vertex_count = TRIANGLES_PER_CIRCLE * 3;
     let coord_count = vertex_count * 3;
     let theta = 2.0 * PI / TRIANGLES_PER_CIRCLE as f32;
-    let color = |i: usize| match i % 3 {
+    let color = |i: u64| match i % 3 {
         0 => r,
         1 => g,
         2 => b,
         _ => panic!("impossible"),
     };
-    let colors: Vec<f32> = generate_vec(coord_count as usize, color);
+    let colors: Vec<f32> = (0..coord_count).map(color).collect();
     let vertex = |i: u64| {
         let n = i / 9;
         match i % 9 {
