@@ -8,7 +8,7 @@ Requirements:
 Conclusions:
 
 - Haskell is more concise and easier to read and write
-- Performance is similar: 
+- Performance is similar (see table below)
 
 | Triangles per circle | Haskell (circles @ 55fps)| Rust (circles @ 55fps) | Haskell/Rust |
 |---|---|---|---|

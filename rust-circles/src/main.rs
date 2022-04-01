@@ -501,7 +501,7 @@ fn init_resources() -> Program {
 
 const WINDOW_WIDTH: u32 = 900;
 const WINDOW_HEIGHT: u32 = 900;
-const TRIANGLES_PER_CIRCLE: u64 = 2048;
+const TRIANGLES_PER_CIRCLE: u64 = 32;
 
 fn main() {
     let speed_factor = 5.0;

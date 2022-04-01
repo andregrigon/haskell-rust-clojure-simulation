@@ -37,7 +37,7 @@ instance Show World where
 showDouble :: Double -> String
 showDouble d = show $ fromIntegral (floor (d * (10.0 ^ precision))) / (10.0 ^ precision)
   where
-    precision = 0
+    precision = 2
 
 (.+.) :: Vec2 -> Vec2 -> Vec2
 Vec2 x1 y1 .+. Vec2 x2 y2 = Vec2 (x1 + x2) (y1 + y2)
@@ -322,7 +322,7 @@ windowWidth = 900
 
 windowHeight = 900
 
-trianglesPerCircle = 2048
+trianglesPerCircle = 32
 
 main :: IO ()
 main = do
