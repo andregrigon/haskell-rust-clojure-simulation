@@ -190,6 +190,10 @@ simulate program window duration initialWorld = do
 
 initResources :: IO GL.Program
 initResources = do
+  version <- GL.get GL.glVersion
+  renderer <- GL.get GL.renderer
+  putStrLn $ "GL version: " ++ version ++ ", renderer: " ++ renderer
+
   -- compile shaders
   vSh <- GL.createShader GL.VertexShader
   GL.shaderSourceBS vSh $= vsSource

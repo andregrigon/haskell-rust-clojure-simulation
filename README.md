@@ -2,15 +2,15 @@ Simple simulation of circles colliding and splitting in Haskell and Rust.
 Intentionally CPU heavy (e.g., doesn't use VBOs for rendering, doesn't calculate transforms in shaders).
 Straightforward single-threaded code with very little manual optimization.
 
-Requirements:
+# Requirements:
 - Install libsdl2-dev
 
-Conclusions:
+# Conclusions:
 
 - Haskell is more concise and easier to read and write
-- Performance is similar (see table below)
 - Memory usage is similar, around 18MB
 - FPS is similarly steady around 59.5-60.0, with occasional drops to 57/58 in both. No obvious GC pauses for Haskell. 
+- Performance is similar:
 
 | Triangles per circle | Haskell (circles @ 55fps)| Rust (circles @ 55fps) | Haskell/Rust |
 |---|---|---|---|
@@ -24,7 +24,14 @@ Conclusions:
 | 2048 | 110 | 99 | 1.11 |
 | 4096 | 53 | 40 | 1.32 |
 
-Haskell:
+Measured with:
+- CPU: Intel i5-7200U @ 2.50GHz × 4
+- Memory: 16GB
+- Graphics: Mesa Intel HD Graphics 620 (KBL GT2))
+
+# Notes
+
+## Haskell:
 - Enabling optimization is in cabal.project.local
 - Annotating strict data fields and compiling with `ghc-options: -fllvm -funbox-strict-fields -fexcess-precision` makes a huge difference.
 - Using vectors everywhere had much worse performance than lists where they are used only for accumulation and single iteration
@@ -36,6 +43,6 @@ $ cabal install profiteur
 $ cabal run haskell-circles -- +RTS -pa -sstderr && profiteur haskell-circles.prof && firefox haskell-circles.prof.html
 ```
 
-Rust:
+## Rust:
 - Run with `cargo run --release`
 - Allocating vector with capacity and pushing into it was not faster than mapping and collecting

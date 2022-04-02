@@ -488,6 +488,12 @@ fn create_whitespace_cstring_with_len(len: usize) -> CString {
 }
 
 fn init_resources() -> Program {
+    unsafe {
+        let version = CStr::from_ptr(gl::GetString(gl::VERSION) as *const i8);
+        let renderer = CStr::from_ptr(gl::GetString(gl::RENDERER) as *const i8);
+        println!("GL version: {:?}, renderer: {:?}", version, renderer);
+    };
+
     let vert_shader =
         Shader::from_vert_source(&CString::new(include_str!("shader.vert")).unwrap()).unwrap();
 
