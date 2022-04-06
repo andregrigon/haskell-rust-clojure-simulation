@@ -27,7 +27,7 @@ Straightforward single-threaded code with very little manual optimization.
 Measured with:
 - CPU: Intel i5-7200U @ 2.50GHz × 4
 - Memory: 16GB
-- Graphics: Mesa Intel HD Graphics 620 (KBL GT2))
+- Graphics: Mesa Intel HD Graphics 620 (KBL GT2)
 
 # Notes
 
