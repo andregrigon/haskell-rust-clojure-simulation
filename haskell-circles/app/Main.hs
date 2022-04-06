@@ -10,7 +10,6 @@ import qualified Data.Vector as V
 import qualified Data.Vector.Storable as SV
 import Graphics.Rendering.OpenGL (($=))
 import qualified Graphics.Rendering.OpenGL as GL
-import qualified Graphics.Rendering.OpenGL as SDL
 import qualified SDL
 import qualified SDL.Video.OpenGL as SDL
 import System.Exit (exitFailure)
@@ -157,13 +156,13 @@ evolveWorld dt world@World {worldObjects, worldAge} =
         rightWall = Bound {boundId = -4, boundRadius = 0, boundPosition = Vec2 wall y}
         walls = [topWall, bottomWall, leftWall, rightWall]
 
-drawWorld :: SDL.Program -> SDL.Window -> World -> IO ()
+drawWorld :: GL.Program -> SDL.Window -> World -> IO ()
 drawWorld program window world = do
   let drawings = map drawObject (worldObjects world)
   draw program window drawings
   SDL.glSwapWindow window
 
-simulate :: SDL.Program -> SDL.Window -> Double -> World -> IO ()
+simulate :: GL.Program -> SDL.Window -> Double -> World -> IO ()
 simulate program window duration initialWorld = do
   startTime <- currentTime
   loop (0, 0) 0 startTime initialWorld
