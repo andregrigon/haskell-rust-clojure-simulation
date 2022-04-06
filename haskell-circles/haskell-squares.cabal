@@ -13,4 +13,4 @@ executable haskell-circles
     default-language: Haskell2010
     default-extensions: NamedFieldPuns, OverloadedStrings, BangPatterns, MagicHash
     ghc-options: -rtsopts -threaded -fllvm -funbox-strict-fields -fexcess-precision
-    -- -threaded for realism
+    -- -threaded for realism\

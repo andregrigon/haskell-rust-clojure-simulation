@@ -110,7 +110,11 @@ const GROWTH_PER_SEC: f64 = 0.02;
 const MAX_GROWTH_RAD: f64 = 1.0;
 
 impl Object {
-    fn evolve(self: &Self, maybe_col: &Option<Collision>, interval: &Interval) -> Vec<Object> {
+    fn evolve(
+        self: &Self,
+        find_collision: impl Fn() -> Option<Collision>,
+        interval: &Interval,
+    ) -> Vec<Object> {
         fn outside_walls(a: &Object) -> bool {
             let Vec2(x, y) = a.position;
             x.abs() > WALL || y.abs() > WALL
@@ -118,9 +122,10 @@ impl Object {
         if outside_walls(&self) {
             vec![]
         } else {
+            let maybe_col = find_collision();
             let collided = maybe_col.is_some();
             let speed2 = match maybe_col {
-                Some(Collision(dir)) => self.speed.reflect(dir),
+                Some(Collision(dir)) => self.speed.reflect(&dir),
                 None => self.speed,
             };
             let boost = if collided { 3.0 } else { 1.0 };
@@ -184,33 +189,34 @@ impl World {
     fn evolve(self: &Self, interval: &Interval) -> World {
         let bounds = &self.objects.iter().map(|x| x.bound()).collect();
         fn collide_evolve(a: &Object, bounds: &Vec<Bound>, interval: &Interval) -> Vec<Object> {
-            let bound = a.bound();
-            let Vec2(x, y) = bound.position;
-            let top_wall = Bound {
-                id: -1,
-                radius: 0.0,
-                position: Vec2(x, WALL),
+            let find_collision = || {
+                let bound = a.bound();
+                let Vec2(x, y) = bound.position;
+                let top_wall = Bound {
+                    id: -1,
+                    radius: 0.0,
+                    position: Vec2(x, WALL),
+                };
+                let bottom_wall = Bound {
+                    id: -2,
+                    radius: 0.0,
+                    position: Vec2(x, -WALL),
+                };
+                let left_wall = Bound {
+                    id: -3,
+                    radius: 0.0,
+                    position: Vec2(-WALL, y),
+                };
+                let right_wall = Bound {
+                    id: -4,
+                    radius: 0.0,
+                    position: Vec2(WALL, y),
+                };
+                let mut walls_and_bounds = vec![&top_wall, &bottom_wall, &left_wall, &right_wall];
+                let _ = &walls_and_bounds.extend(bounds);
+                bound.detect_collisions(&walls_and_bounds)
             };
-            let bottom_wall = Bound {
-                id: -2,
-                radius: 0.0,
-                position: Vec2(x, -WALL),
-            };
-            let left_wall = Bound {
-                id: -3,
-                radius: 0.0,
-                position: Vec2(-WALL, y),
-            };
-            let right_wall = Bound {
-                id: -4,
-                radius: 0.0,
-                position: Vec2(WALL, y),
-            };
-            let mut walls_and_bounds = vec![&top_wall, &bottom_wall, &left_wall, &right_wall];
-            let _ = &walls_and_bounds.extend(bounds);
-
-            let cols = bound.detect_collisions(&walls_and_bounds);
-            a.evolve(&cols, interval)
+            a.evolve(find_collision, interval)
         }
         World {
             objects: self
