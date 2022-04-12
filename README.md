@@ -21,17 +21,17 @@ Straightforward single-threaded code with very little manual optimization.
   - No obvious GC pauses for Haskell or Clojure.
 - Overall FPS per circle count:
 
-| Triangles per circle | Haskell (circles @ 55fps) | Rust (circles @ 55fps) | Haskell/Rust | Haskell (circles @ 55fps) | Haskell/Clojure |
+| Triangles per circle | Haskell (circles @ 55fps) | Rust (circles @ 55fps) | Clojure (circles @ 55fps) | Haskell/Rust | Haskell/Clojure |
 |---|---|---|---|---|---|
-| 16 | 1352 | 2843 | 0.48 | 169 | 8 |
-| 32 | 1310 | 2273 | 0.58 | 190 | 6.89 |
-| 64 | 1174 | 1787 | 0.66 | 202 | 5.81 |
-| 128 | 965 | 1190 | 0.81 | 114 | 8.46 |
-| 256 | 689 | 705 | 0.98 | 91 | 7.57 |
-| 512 | 383 | 379 | 1.01 | 55 | 6.96 |
-| 1024 | 217 | 205 | 1.06 | 27 | 8.03 |
-| 2048 | 110 | 99 | 1.11 | 16 | 6.88 |
-| 4096 | 53 | 40 | 1.32 | 0 | - |
+| 16 | 1352 | 2843 | 169 | 0.48 | 8 |
+| 32 | 1310 | 2273 | 190 | 0.58 | 6.89 |
+| 64 | 1174 | 1787 | 202 | 0.66 | 5.81 |
+| 128 | 965 | 1190 | 114 | 0.81 | 8.46 |
+| 256 | 689 | 705 | 91 | 0.98 | 7.57 |
+| 512 | 383 | 379 | 55 | 1.01 | 6.96 |
+| 1024 | 217 | 205 | 27 | 1.06 | 8.03 |
+| 2048 | 110 | 99 | 16 | 1.11 | 6.88 |
+| 4096 | 53 | 40 | 0 | 1.32 | - |
 
 Measured with:
 - CPU: Intel i5-7200U @ 2.50GHz × 4
