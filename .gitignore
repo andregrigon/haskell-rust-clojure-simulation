@@ -22,3 +22,7 @@ cabal.project.local~
 .HTF/
 .ghc.environment.*
 target/
+.lein-repl-history
+.lsp/
+.clj-kondo/
+.calva/
