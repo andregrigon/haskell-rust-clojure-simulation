@@ -22,7 +22,7 @@ Straightforward single-threaded code with very little manual optimization.
 - Overall FPS per circle count:
 
 | Triangles per circle | Haskell (circles @ 55fps) | Rust (circles @ 55fps) | Haskell/Rust | Haskell (circles @ 55fps) | Haskell/Clojure |
-|---|---|---|---|---|
+|---|---|---|---|---|---|
 | 16 | 1352 | 2843 | 0.48 | 169 | 8 |
 | 32 | 1310 | 2273 | 0.58 | 190 | 6.89 |
 | 64 | 1174 | 1787 | 0.66 | 202 | 5.81 |
