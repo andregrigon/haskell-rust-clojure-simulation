@@ -9,7 +9,7 @@ Straightforward single-threaded code with very little manual optimization.
 # Conclusions:
 
 - Code:
-  - Haskell: original code and had most previous experience with
+  - Haskell: original code and had most previous experience with; had most optimization work done
   - Rust: very easy port from Haskell, worked first time
   - Clojure: easy port but many ClassCastException/NullPointerExceptions before running successfully, some very annoying to understand
 - Memory:
