@@ -176,6 +176,14 @@
 
 (defrecord World [objects age])
 
+(defn find-first
+  ([pred coll]
+   (reduce (fn [_ x]
+             (if (pred x)
+               (reduced x)
+               nil))
+           nil coll)))
+
 (defn detect-collisions
   [a bs]
   (letfn [(collides-with [{id1 :id, r1 :radius, p1 :position}
@@ -183,12 +191,13 @@
             (and (not= id1 id2)
                  (<d (distance-squared p1 p2) (expt (+d r1 r2) 2))))
           (mk-collision [{p1 :position}, {p2 :position}]
-            (Collision. (plus p2 (times -1.0 p1))))
-          (collisions [^Bound a, bs]
-            (->> bs
-                 (filter #(collides-with a %))
-                 (map #(mk-collision a %))))]
-    (first (collisions a bs))))
+            (Collision. (plus p2 (times -1.0 p1))))]
+    ;; Use find-first instead of (first (filter ...)) to avoid overcomputation
+    ;; due to chunking
+    (let [colliding (find-first #(collides-with a %) bs)]
+      (if colliding
+        (mk-collision a colliding)
+        nil))))
 
 (defn evolve-world
   [dt world]

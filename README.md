@@ -1,16 +1,15 @@
 Simple simulation of circles colliding and splitting in Haskell, Rust and Clojure.
 Intentionally CPU heavy (e.g., doesn't use VBOs for rendering, doesn't calculate transforms in shaders).
-Straightforward single-threaded code with very little manual optimization.
+Straightforward single-threaded code with little manual optimization.
 
 # Requirements:
 - For Haskell and Rust install libsdl2-dev
-- Clojure might need libglfw3-dev
 
 # Conclusions:
 
 - Code:
   - Haskell: original code and had most previous experience with; had most optimization work done
-  - Rust: very easy port from Haskell, worked first time
+  - Rust: very easy port from Haskell, worked first time; had least optimization work
   - Clojure: easy port but many ClassCastException/NullPointerExceptions before running successfully, some very annoying to understand
 - Memory:
   - Haskell and Rust: around 18MB
@@ -23,12 +22,12 @@ Straightforward single-threaded code with very little manual optimization.
 
 | Triangles per circle | Haskell (circles @ 55fps) | Rust (circles @ 55fps) | Clojure (circles @ 55fps) | Haskell/Rust | Haskell/Clojure |
 |---|---|---|---|---|---|
-| 16 | 1352 | 2843 | 169 | 0.48 | 8 |
-| 32 | 1310 | 2273 | 190 | 0.58 | 6.89 |
-| 64 | 1174 | 1787 | 202 | 0.66 | 5.81 |
-| 128 | 965 | 1190 | 114 | 0.81 | 8.46 |
-| 256 | 689 | 705 | 91 | 0.98 | 7.57 |
-| 512 | 383 | 379 | 55 | 1.01 | 6.96 |
+| 16 | 1352 | 2843 | 192 | 0.48 | 7.04 |
+| 32 | 1310 | 2273 | 201 | 0.58 | 6.52 |
+| 64 | 1174 | 1787 | 168 | 0.66 | 6.98 |
+| 128 | 965 | 1190 | 135 | 0.81 | 7.15 |
+| 256 | 689 | 705 | 97 | 0.98 | 7.10 |
+| 512 | 383 | 379 | 51 | 1.01 | 7.50 |
 | 1024 | 217 | 205 | 27 | 1.06 | 8.03 |
 | 2048 | 110 | 99 | 16 | 1.11 | 6.88 |
 | 4096 | 53 | 40 | 0 | 1.32 | - |
@@ -59,3 +58,4 @@ $ cabal run haskell-circles -- +RTS -pa -sstderr && profiteur haskell-circles.pr
 
 ## Clojure:
 - Adding `(set! *unchecked-math* :warn-on-boxed)` and fixing all warnings didn't seem to change performance (and was very laborious)
+- Explicitly avoiding transducer chunking had a 5-10% performance increase when testing with hundreds of circles
