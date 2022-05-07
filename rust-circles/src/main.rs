@@ -4,6 +4,11 @@ use std;
 use std::f32::consts::PI;
 use std::ffi::{CStr, CString};
 
+///////////////////////////////////////////////
+/// This code is based on the Haskell version,
+/// see that for documentation.
+///////////////////////////////////////////////
+
 fn current_time() -> Instant {
     Instant {
         secs: std::time::SystemTime::now()

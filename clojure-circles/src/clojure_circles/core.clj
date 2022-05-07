@@ -5,6 +5,11 @@
            (org.lwjgl.glfw GLFW))
   (:gen-class))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; This code is based on the Haskell version,
+;; see that for documentation
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* :warn-on-boxed)
 

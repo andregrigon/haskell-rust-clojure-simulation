@@ -43,7 +43,7 @@ Measured with:
 # Notes
 
 ## Haskell:
-- Enabling optimization is in cabal.project.local
+- Run with `cabal run`. Enable optimization in cabal.project.local if desired.
 - Annotating strict data fields and compiling with `ghc-options: -fllvm -funbox-strict-fields -fexcess-precision` makes a huge difference.
 - Using vectors everywhere had much worse performance than lists where they are used only for accumulation and single iteration
 - The functions `quot` and `rem` are the equivalents of Rust's `/` and `%` (as opposed to `div` and `mod`). They also perform much better.
@@ -59,5 +59,6 @@ $ cabal run haskell-circles -- +RTS -pa -sstderr && profiteur haskell-circles.pr
 - Allocating vector with capacity and pushing into it was not faster than mapping and collecting
 
 ## Clojure:
+- Run with `lein run`
 - Adding `(set! *unchecked-math* :warn-on-boxed)` and fixing all warnings didn't seem to change performance (and was very laborious)
 - Explicitly avoiding transducer chunking had a 5-10% performance increase when testing with hundreds of circles

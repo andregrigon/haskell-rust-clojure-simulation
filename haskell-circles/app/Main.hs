@@ -14,59 +14,76 @@ import qualified SDL
 import qualified SDL.Video.OpenGL as SDL
 import System.Exit (exitFailure)
 
-currentTime :: IO Instant
-currentTime = Instant . realToFrac <$> getPOSIXTime
+-------------------------------------------------------------
+-- Simulate many circles colliding and splitting and write
+-- the FPS evolution to stdout.
+-------------------------------------------------------------
 
-newtype Interval = Interval {interval :: Double}
+windowWidth = 900
 
-newtype Instant = Instant Double
+windowHeight = 900
 
-data Vec2 = Vec2 !Double !Double
+-- Distance of walls representing the window bounds
+wall :: Double
+wall = 10
 
-instance Show Vec2 where
-  show (Vec2 x y) = "(" ++ showDouble x ++ ", " ++ showDouble y ++ ")"
+-- How many triangles are used to render each circle
+trianglesPerCircle = 32
 
-instance Show Object where
-  show Object {objId, objPosition} = show objId ++ "@" ++ show objPosition
+-- Create window and run simulation
+main :: IO ()
+main = do
+  -- Initial objects
+  let speedFactor = 5
+      objs =
+        [ Object {objId = 1, objColor = red, objRadius = 1, objPosition = Vec2 2 0, objSpeed = speedFactor *. Vec2 0 1},
+          Object {objId = 2, objColor = blue, objRadius = 1, objPosition = Vec2 (-2) 0, objSpeed = speedFactor *. Vec2 (- 1) 1},
+          Object {objId = 3, objColor = green, objRadius = 1, objPosition = Vec2 0 (- 1), objSpeed = speedFactor *. Vec2 1 1}
+        ]
+  SDL.initializeAll
+  window <-
+    SDL.createWindow
+      (T.pack "Haskell")
+      SDL.defaultWindow
+        { SDL.windowInitialSize = SDL.V2 windowWidth windowHeight,
+          SDL.windowGraphicsContext = SDL.OpenGLContext SDL.defaultOpenGL
+        }
+  context <- SDL.glCreateContext window
+  program <- initResources
+  simulate program window 10 World {worldObjects = objs, worldAge = 0}
+  SDL.destroyWindow window
 
-instance Show World where
-  show World {worldObjects, worldAge} =
-    showDouble worldAge ++ "s: " ++ show (length worldObjects) ++ " objects"
-
-showDouble :: Double -> String
-showDouble d = show $ fromIntegral (floor (d * (10.0 ^ precision))) / (10.0 ^ precision)
+-- Simulate the given world for the given duration, rendering it to the window
+simulate :: GL.Program -> SDL.Window -> Double -> World -> IO ()
+simulate program window duration initialWorld = do
+  startTime <- currentTime
+  loop (0, 0) 0 startTime initialWorld
   where
-    precision = 2
+    fpsWindow = 0.25
 
-(.+.) :: Vec2 -> Vec2 -> Vec2
-Vec2 x1 y1 .+. Vec2 x2 y2 = Vec2 (x1 + x2) (y1 + y2)
+    loop :: (Double, Double) -> Double -> Instant -> World -> IO ()
+    loop (fpsInterval, fpsCount) total instant@(Instant i) world = do
+      drawWorld program window world
+      instant'@(Instant i') <- currentTime
+      let dt = i' - i
+          world' = evolveWorld (Interval dt) world
+          total' = total + dt
+      fps <-
+        if fpsInterval >= fpsWindow
+          then do
+            let fps = fpsCount / fpsInterval
+            putStrLn $ (if fps < 55 then "! " else "") ++ showDouble fps ++ "fps | " ++ show world
+            pure (0, 0)
+          else pure (fpsInterval + dt, fpsCount + 1)
+      if total' >= duration
+        then pure ()
+        else loop fps total' instant' world'
 
-(*.) :: Double -> Vec2 -> Vec2
-k *. Vec2 x y = Vec2 (k * x) (k * y)
+-------------------------------------
+-- Object simulation
+-------------------------------------
 
-dot :: Vec2 -> Vec2 -> Double
-Vec2 x1 y1 `dot` Vec2 x2 y2 = (x1 * x2) + (y1 * y2)
-
-distanceSquared :: Vec2 -> Vec2 -> Double
-Vec2 x1 y1 `distanceSquared` Vec2 x2 y2 = (x1 - x2) ^ 2 + (y1 - y2) ^ 2
-
-zero :: Vec2
-zero = Vec2 0.0 0.0
-
-vecLength :: Vec2 -> Double
-vecLength v = sqrt (distanceSquared v zero)
-
-normalize :: Vec2 -> Vec2
-normalize v = (1.0 / vl') *. v
-  where
-    vl = vecLength v
-    vl' = if vl < 0.01 then 0.01 else vl
-
-reflect :: Vec2 -> Vec2 -> Vec2
-reflect d n = d .+. (((-2.0) * (d `dot` n')) *. n')
-  where
-    n' = normalize n
-
+-- State of an object
 data Object = Object
   { objId :: !Int,
     objRadius :: !Double,
@@ -75,31 +92,20 @@ data Object = Object
     objColor :: !Color
   }
 
+-- Object boundary, for collision detection
 data Bound = Bound
   { boundId :: !Int,
     boundRadius :: !Double,
     boundPosition :: !Vec2
   }
 
+-- Pair of (vertices, colors) used to render an object
 type Visuals = (SV.Vector Float, SV.Vector Float)
 
+-- Direction of collision
 newtype Collision = Collision Vec2
 
-wall :: Double
-wall = 10
-
-detectCollisions :: Bound -> [Bound] -> Maybe Collision
-detectCollisions a bs = case collisions a bs of
-  [] -> Nothing
-  c : _ -> Just c
-  where
-    collidesWith
-      Bound {boundId = id1, boundRadius = r1, boundPosition = p1}
-      Bound {boundId = id2, boundRadius = r2, boundPosition = p2} =
-        id1 /= id2 && distanceSquared p1 p2 < (r1 + r2) ^ 2
-    mkCollision Bound {boundPosition = p1} Bound {boundPosition = p2} = Collision (p2 .+. ((- 1) *. p1))
-    collisions a = map (mkCollision a) . filter (collidesWith a)
-
+-- Evolve the object considering whether it collided and the elapsed interval
 evolveObject :: Maybe Collision -> Interval -> Object -> [Object]
 evolveObject maybeCol (Interval dt) old
   | outsideWalls old = []
@@ -126,18 +132,25 @@ evolveObject maybeCol (Interval dt) old
         then objRadius old + (growthPerSec * dt)
         else objRadius old
 
+-- Return the boundary of the object for collision detection
 boundObject :: Object -> Bound
 boundObject Object {objId, objRadius, objPosition} =
   Bound {boundId = objId, boundRadius = objRadius, boundPosition = objPosition}
 
+-- Draw an object as a circle
 drawObject :: Object -> Visuals
 drawObject Object {objRadius, objPosition, objColor} = circle objColor objRadius objPosition
+
+---------------------------------------
+-- World simulation
+---------------------------------------
 
 data World = World
   { worldObjects :: ![Object],
     worldAge :: !Double
   }
 
+-- Evolve the world by evolving each of its objects
 evolveWorld :: Interval -> World -> World
 evolveWorld dt world@World {worldObjects, worldAge} =
   world
@@ -147,6 +160,9 @@ evolveWorld dt world@World {worldObjects, worldAge} =
     }
   where
     bounds = fmap boundObject worldObjects
+
+    -- Calculate the collisions of a given object with other objects
+    -- and with imaginary walls representing the bounds of the window
     collisions a = detectCollisions bound (walls ++ bounds)
       where
         bound@Bound {boundPosition = Vec2 x y} = boundObject a
@@ -156,37 +172,31 @@ evolveWorld dt world@World {worldObjects, worldAge} =
         rightWall = Bound {boundId = -4, boundRadius = 0, boundPosition = Vec2 wall y}
         walls = [topWall, bottomWall, leftWall, rightWall]
 
+-- Detect collisions of one boundary with any other
+detectCollisions :: Bound -> [Bound] -> Maybe Collision
+detectCollisions a bs = case collisions a bs of
+  [] -> Nothing
+  c : _ -> Just c
+  where
+    collidesWith
+      Bound {boundId = id1, boundRadius = r1, boundPosition = p1}
+      Bound {boundId = id2, boundRadius = r2, boundPosition = p2} =
+        id1 /= id2 && distanceSquared p1 p2 < (r1 + r2) ^ 2
+    mkCollision Bound {boundPosition = p1} Bound {boundPosition = p2} = Collision (p2 .+. ((- 1) *. p1))
+    collisions a = map (mkCollision a) . filter (collidesWith a)
+
+-- Draw the world by drawing each of its objects
 drawWorld :: GL.Program -> SDL.Window -> World -> IO ()
 drawWorld program window world = do
   let drawings = map drawObject (worldObjects world)
   draw program window drawings
   SDL.glSwapWindow window
 
-simulate :: GL.Program -> SDL.Window -> Double -> World -> IO ()
-simulate program window duration initialWorld = do
-  startTime <- currentTime
-  loop (0, 0) 0 startTime initialWorld
-  where
-    fpsWindow = 0.25
+------------------------------------------
+-- Rendering with OpenGL
+------------------------------------------
 
-    loop :: (Double, Double) -> Double -> Instant -> World -> IO ()
-    loop (fpsInterval, fpsCount) total instant@(Instant i) world = do
-      drawWorld program window world
-      instant'@(Instant i') <- currentTime
-      let dt = i' - i
-          world' = evolveWorld (Interval dt) world
-          total' = total + dt
-      fps <-
-        if fpsInterval >= fpsWindow
-          then do
-            let fps = fpsCount / fpsInterval
-            putStrLn $ (if fps < 55 then "! " else "") ++ showDouble fps ++ "fps | " ++ show world
-            pure (0, 0)
-          else pure (fpsInterval + dt, fpsCount + 1)
-      if total' >= duration
-        then pure ()
-        else loop fps total' instant' world'
-
+-- Load shaders and create the shader program
 initResources :: IO GL.Program
 initResources = do
   version <- GL.get GL.glVersion
@@ -232,6 +242,8 @@ initResources = do
 
   return program
 
+-- Vertex and fragment shaders
+-- No matrix transformations are calculated in the shaders
 vsSource, fsSource :: BS.ByteString
 vsSource =
   BS.intercalate
@@ -256,6 +268,7 @@ fsSource =
       "}"
     ]
 
+-- Create a pair of (vertices, colors) used to draw a circle with the given color, radius and position
 circle :: Color -> Double -> Vec2 -> (SV.Vector Float, SV.Vector Float)
 circle (Color r g b) rad' (Vec2 x' y') = (SV.generate coordCount vertex, SV.generate coordCount color)
   where
@@ -287,6 +300,7 @@ circle (Color r g b) rad' (Vec2 x' y') = (SV.generate coordCount vertex, SV.gene
       2 -> b
       _ -> error "impossible"
 
+-- Render each pair of (vertices, colors)
 draw :: GL.Program -> SDL.Window -> [(SV.Vector Float, SV.Vector Float)] -> IO ()
 draw p w verticesColors = do
   let (width, height) = (fromIntegral windowWidth, fromIntegral windowHeight)
@@ -310,6 +324,7 @@ draw p w verticesColors = do
     GL.vertexAttribArray (GL.AttribLocation 0) $= GL.Disabled
     GL.vertexAttribArray (GL.AttribLocation 1) $= GL.Disabled
 
+-- RGB color
 data Color = Color !Float !Float !Float
 
 red :: Color
@@ -321,29 +336,68 @@ green = Color 0 0.6 0
 blue :: Color
 blue = Color 0 0 0.6
 
-windowWidth = 900
+-------------------------------
+-- Time keeping
+-------------------------------
 
-windowHeight = 900
+currentTime :: IO Instant
+currentTime = Instant . realToFrac <$> getPOSIXTime
 
-trianglesPerCircle = 32
+newtype Interval = Interval {interval :: Double}
 
-main :: IO ()
-main = do
-  let speedFactor = 5
-      objs =
-        [ Object {objId = 1, objColor = red, objRadius = 1, objPosition = Vec2 2 0, objSpeed = speedFactor *. Vec2 0 1},
-          Object {objId = 2, objColor = blue, objRadius = 1, objPosition = Vec2 (-2) 0, objSpeed = speedFactor *. Vec2 (- 1) 1},
-          Object {objId = 3, objColor = green, objRadius = 1, objPosition = Vec2 0 (- 1), objSpeed = speedFactor *. Vec2 1 1}
-        ]
-  SDL.initializeAll
-  window <-
-    SDL.createWindow
-      (T.pack "Haskell")
-      SDL.defaultWindow
-        { SDL.windowInitialSize = SDL.V2 windowWidth windowHeight,
-          SDL.windowGraphicsContext = SDL.OpenGLContext SDL.defaultOpenGL
-        }
-  context <- SDL.glCreateContext window
-  program <- initResources
-  simulate program window 10 World {worldObjects = objs, worldAge = 0}
-  SDL.destroyWindow window
+newtype Instant = Instant Double
+
+-------------------------------
+-- Linear algebra
+-------------------------------
+
+data Vec2 = Vec2 !Double !Double
+
+instance Show Vec2 where
+  show (Vec2 x y) = "(" ++ showDouble x ++ ", " ++ showDouble y ++ ")"
+
+instance Show Object where
+  show Object {objId, objPosition} = show objId ++ "@" ++ show objPosition
+
+instance Show World where
+  show World {worldObjects, worldAge} =
+    showDouble worldAge ++ "s: " ++ show (length worldObjects) ++ " objects"
+
+showDouble :: Double -> String
+showDouble d = show $ fromIntegral (floor (d * (10.0 ^ precision))) / (10.0 ^ precision)
+  where
+    precision = 2
+
+-- Vector sum
+(.+.) :: Vec2 -> Vec2 -> Vec2
+Vec2 x1 y1 .+. Vec2 x2 y2 = Vec2 (x1 + x2) (y1 + y2)
+
+-- Multiplication of vector by scalar
+(*.) :: Double -> Vec2 -> Vec2
+k *. Vec2 x y = Vec2 (k * x) (k * y)
+
+-- Vector dot product
+dot :: Vec2 -> Vec2 -> Double
+Vec2 x1 y1 `dot` Vec2 x2 y2 = (x1 * x2) + (y1 * y2)
+
+-- Squared distance between to vectors
+distanceSquared :: Vec2 -> Vec2 -> Double
+Vec2 x1 y1 `distanceSquared` Vec2 x2 y2 = (x1 - x2) ^ 2 + (y1 - y2) ^ 2
+
+zero :: Vec2
+zero = Vec2 0.0 0.0
+
+vecLength :: Vec2 -> Double
+vecLength v = sqrt (distanceSquared v zero)
+
+normalize :: Vec2 -> Vec2
+normalize v = (1.0 / vl') *. v
+  where
+    vl = vecLength v
+    vl' = if vl < 0.01 then 0.01 else vl
+
+-- Returns the result of reflecting a vector 'd' at a plane with normal 'n'
+reflect :: Vec2 -> Vec2 -> Vec2
+reflect d n = d .+. (((-2.0) * (d `dot` n')) *. n')
+  where
+    n' = normalize n
