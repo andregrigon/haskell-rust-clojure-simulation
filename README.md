@@ -24,7 +24,6 @@ Straightforward single-threaded code with little manual optimization.
 
 | Triangles per circle | Haskell (circles @ 55fps) | Rust (circles @ 55fps) | Clojure (circles @ 55fps) | Haskell/Rust | Haskell/Clojure |
 |---|---|---|---|---|---|
-
 | 16 | 1352 | 2843 | 192 | 0.48 | 7.04 |
 | 32 | 1310 | 2273 | 201 | 0.58 | 6.52 |
 | 64 | 1174 | 1787 | 168 | 0.66 | 6.98 |
